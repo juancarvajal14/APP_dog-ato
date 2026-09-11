@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "Varela Round", ui-rounded, sans-serif;
+  --font-body: "Nunito Sans", ui-sans-serif, sans-serif;
+
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+
+  --color-cream: #fffaf3;
+  --color-cream-soft: #fff1e2;
+  --color-sand: #f2e6d8;
+  --color-sand-dark: #e4d2ba;
+
+  --color-accent: #f97316;
+  --color-accent-dark: #ea580c;
+  --color-accent-soft: #ffedd5;
+
+  --color-ink: #2b2118;
+  --color-ink-soft: #6b5b4d;
+  --color-ink-faint: #9c8b7c;
+
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+}
+
+::selection {
+  background-color: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+* {
+  scrollbar-color: var(--color-sand-dark) transparent;
+  scrollbar-width: thin;
+}
