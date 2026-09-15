@@ -6,24 +6,29 @@ import { useData } from '../../context/DataContext'
 
 const vacio = { nombre: '', apellido: '', documento: '', telefono: '', email: '', direccion: '' }
 
-export function PropietarioFormModal({ abierto, onCerrar }) {
-  const { agregarPropietario } = useData()
+export function PropietarioFormModal({ abierto, onCerrar, propietario }) {
+  const { agregarPropietario, editarPropietario } = useData()
   const [form, setForm] = useState(vacio)
+  const editando = Boolean(propietario)
 
   useEffect(() => {
-    if (abierto) setForm(vacio)
-  }, [abierto])
+    if (abierto) setForm(propietario ? { ...vacio, ...propietario } : vacio)
+  }, [abierto, propietario])
 
   const actualizar = (campo) => (evento) => setForm((f) => ({ ...f, [campo]: evento.target.value }))
 
   const manejarEnvio = (evento) => {
     evento.preventDefault()
-    agregarPropietario(form)
+    if (editando) {
+      editarPropietario(propietario.id, form)
+    } else {
+      agregarPropietario(form)
+    }
     onCerrar()
   }
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} titulo="Registrar propietario">
+    <Modal abierto={abierto} onCerrar={onCerrar} titulo={editando ? 'Editar propietario' : 'Registrar propietario'}>
       <form onSubmit={manejarEnvio} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -67,7 +72,7 @@ export function PropietarioFormModal({ abierto, onCerrar }) {
           <Button type="button" variant="secondary" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="submit">Registrar propietario</Button>
+          <Button type="submit">{editando ? 'Guardar cambios' : 'Registrar propietario'}</Button>
         </div>
       </form>
     </Modal>

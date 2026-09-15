@@ -6,19 +6,30 @@ import { useData } from '../../context/DataContext'
 
 const vacio = { nombre: '', especie: 'Perro', raza: '', sexo: 'macho', fecha_nacimiento: '', propietario_id: '' }
 
-export function MascotaFormModal({ abierto, onCerrar }) {
-  const { propietarios, agregarMascota } = useData()
+export function MascotaFormModal({ abierto, onCerrar, mascota }) {
+  const { propietarios, agregarMascota, editarMascota } = useData()
   const [form, setForm] = useState(vacio)
+  const editando = Boolean(mascota)
 
   useEffect(() => {
-    if (abierto) setForm({ ...vacio, propietario_id: propietarios[0]?.id ?? '' })
-  }, [abierto, propietarios])
+    if (!abierto) return
+    if (mascota) {
+      setForm({ ...vacio, ...mascota, propietario_id: mascota.propietario_id ?? '' })
+    } else {
+      setForm({ ...vacio, propietario_id: propietarios[0]?.id ?? '' })
+    }
+  }, [abierto, mascota, propietarios])
 
   const actualizar = (campo) => (evento) => setForm((f) => ({ ...f, [campo]: evento.target.value }))
 
   const manejarEnvio = (evento) => {
     evento.preventDefault()
-    agregarMascota({ ...form, propietario_id: Number(form.propietario_id) })
+    const datos = { ...form, propietario_id: Number(form.propietario_id) }
+    if (editando) {
+      editarMascota(mascota.id, datos)
+    } else {
+      agregarMascota(datos)
+    }
     onCerrar()
   }
 
@@ -26,7 +37,7 @@ export function MascotaFormModal({ abierto, onCerrar }) {
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo="Registrar mascota"
+      titulo={editando ? 'Editar mascota' : 'Registrar mascota'}
       descripcion="La mascota siempre queda asociada a un propietario existente."
     >
       <form onSubmit={manejarEnvio} className="space-y-4">
@@ -95,7 +106,7 @@ export function MascotaFormModal({ abierto, onCerrar }) {
           <Button type="button" variant="secondary" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="submit">Registrar mascota</Button>
+          <Button type="submit">{editando ? 'Guardar cambios' : 'Registrar mascota'}</Button>
         </div>
       </form>
     </Modal>

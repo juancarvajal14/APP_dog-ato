@@ -31,16 +31,40 @@ export function DataProvider({ children }) {
     return propietario
   }
 
+  const editarPropietario = (id, datos) => {
+    setPropietarios((actuales) => actuales.map((p) => (p.id === id ? { ...p, ...datos, id } : p)))
+  }
+
+  const eliminarPropietario = (id) => {
+    setPropietarios((actuales) => actuales.filter((p) => p.id !== id))
+  }
+
   const agregarMascota = (datos) => {
     const mascota = { id: nuevoId(), ...datos }
     setMascotas((actuales) => [...actuales, mascota])
     return mascota
   }
 
+  const editarMascota = (id, datos) => {
+    setMascotas((actuales) => actuales.map((m) => (m.id === id ? { ...m, ...datos, id } : m)))
+  }
+
+  const eliminarMascota = (id) => {
+    setMascotas((actuales) => actuales.filter((m) => m.id !== id))
+  }
+
   const agregarCita = (datos) => {
     const cita = { id: nuevoId(), estado: 'pendiente', ...datos }
     setCitas((actuales) => [...actuales, cita])
     return cita
+  }
+
+  const editarCita = (id, datos) => {
+    setCitas((actuales) => actuales.map((c) => (c.id === id ? { ...c, ...datos, id } : c)))
+  }
+
+  const eliminarCita = (id) => {
+    setCitas((actuales) => actuales.filter((c) => c.id !== id))
   }
 
   const cancelarCita = (citaId) => {
@@ -60,6 +84,21 @@ export function DataProvider({ children }) {
     setVeterinarios((actuales) => [...actuales, veterinario])
     setUsuarios((actuales) => [...actuales, usuario])
     return veterinario
+  }
+
+  const editarVeterinario = (documentoOriginal, { documento, nombre, apellido, telefono, email, direccion, password, rol }) => {
+    setVeterinarios((actuales) =>
+      actuales.map((v) =>
+        v.documento === documentoOriginal ? { ...v, documento, nombre, apellido, telefono, email, direccion } : v,
+      ),
+    )
+    setUsuarios((actuales) =>
+      actuales.map((u) =>
+        u.documento === documentoOriginal
+          ? { ...u, documento, email, rol, ...(password ? { password } : {}) }
+          : u,
+      ),
+    )
   }
 
   const cambiarEstadoVeterinario = (documento, activo) => {
@@ -88,11 +127,18 @@ export function DataProvider({ children }) {
       citas,
       historial,
       agregarPropietario,
+      editarPropietario,
+      eliminarPropietario,
       agregarMascota,
+      editarMascota,
+      eliminarMascota,
       agregarCita,
+      editarCita,
+      eliminarCita,
       cancelarCita,
       completarCita,
       agregarVeterinario,
+      editarVeterinario,
       cambiarEstadoVeterinario,
       eliminarVeterinario,
       propietarioDe,

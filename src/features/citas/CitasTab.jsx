@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Ban, CalendarClock, CheckCircle2, Clock3, Plus } from 'lucide-react'
+import { Ban, CalendarClock, CheckCircle2, Clock3, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { Card, StatCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -20,12 +20,14 @@ const filtros = [
 ]
 
 export function CitasTab() {
-  const { citas, mascotas, veterinarios, propietarioDe, cancelarCita } = useData()
+  const { citas, mascotas, veterinarios, propietarioDe, cancelarCita, eliminarCita } = useData()
   const [filtro, setFiltro] = useState('todas')
   const [busqueda, setBusqueda] = useState('')
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
+  const [citaAEditar, setCitaAEditar] = useState(null)
   const [citaACompletar, setCitaACompletar] = useState(null)
   const [citaACancelar, setCitaACancelar] = useState(null)
+  const [citaAEliminar, setCitaAEliminar] = useState(null)
 
   const citasEnriquecidas = useMemo(
     () =>
@@ -132,12 +134,35 @@ export function CitasTab() {
                     </td>
                     <td className="px-5 py-3.5">
                       {cita.estado === 'pendiente' ? (
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => setCitaAEditar(cita)}>
+                            <Pencil className="size-3.5" />
+                          </Button>
                           <Button size="sm" variant="accent" onClick={() => setCitaACompletar(cita)}>
                             Completar
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setCitaACancelar(cita)}>
                             Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger-soft"
+                            onClick={() => setCitaAEliminar(cita)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      ) : cita.estado === 'cancelada' ? (
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger-soft"
+                            onClick={() => setCitaAEliminar(cita)}
+                          >
+                            <Trash2 className="size-3.5" />
+                            Eliminar
                           </Button>
                         </div>
                       ) : (
@@ -153,6 +178,7 @@ export function CitasTab() {
       </Card>
 
       <CitaFormModal abierto={modalNuevaCita} onCerrar={() => setModalNuevaCita(false)} />
+      <CitaFormModal abierto={Boolean(citaAEditar)} onCerrar={() => setCitaAEditar(null)} cita={citaAEditar} />
       <CompletarCitaModal cita={citaACompletar} onCerrar={() => setCitaACompletar(null)} />
       <ConfirmDialog
         abierto={Boolean(citaACancelar)}
@@ -161,6 +187,14 @@ export function CitasTab() {
         titulo="Cancelar cita"
         descripcion={`Se cancelará la cita de ${citaACancelar?.mascota?.nombre ?? 'esta mascota'}. No se generará historial clínico para ella.`}
         textoConfirmar="Sí, cancelar cita"
+      />
+      <ConfirmDialog
+        abierto={Boolean(citaAEliminar)}
+        onCerrar={() => setCitaAEliminar(null)}
+        onConfirmar={() => eliminarCita(citaAEliminar.id)}
+        titulo="Eliminar cita"
+        descripcion={`Esta acción borra permanentemente la cita de ${citaAEliminar?.mascota?.nombre ?? 'esta mascota'}. Esta operación no se puede deshacer.`}
+        textoConfirmar="Eliminar permanentemente"
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Mail, Phone, Plus, Power, ShieldCheck, Stethoscope, Trash2, UserCog } from 'lucide-react'
+import { Mail, Pencil, Phone, Plus, Power, ShieldCheck, Stethoscope, Trash2, UserCog } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { Card, StatCard } from '../../components/ui/Card'
@@ -16,7 +16,13 @@ export function VeterinariosTab() {
   const { sesion } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [veterinarioEditar, setVeterinarioEditar] = useState(null)
   const [aEliminar, setAEliminar] = useState(null)
+
+  const cerrarModalFormulario = () => {
+    setModalAbierto(false)
+    setVeterinarioEditar(null)
+  }
 
   const equipo = useMemo(
     () =>
@@ -98,6 +104,9 @@ export function VeterinariosTab() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => setVeterinarioEditar(v)}>
+                            <Pencil className="size-3.5" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="secondary"
@@ -129,7 +138,12 @@ export function VeterinariosTab() {
         )}
       </Card>
 
-      <VeterinarioFormModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} />
+      <VeterinarioFormModal abierto={modalAbierto} onCerrar={cerrarModalFormulario} />
+      <VeterinarioFormModal
+        abierto={Boolean(veterinarioEditar)}
+        onCerrar={cerrarModalFormulario}
+        veterinario={veterinarioEditar}
+      />
 
       <ConfirmDialog
         abierto={Boolean(aEliminar)}

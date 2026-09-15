@@ -15,19 +15,30 @@ const vacio = {
   rol: 'veterinario',
 }
 
-export function VeterinarioFormModal({ abierto, onCerrar }) {
-  const { agregarVeterinario } = useData()
+export function VeterinarioFormModal({ abierto, onCerrar, veterinario }) {
+  const { usuarios, agregarVeterinario, editarVeterinario } = useData()
   const [form, setForm] = useState(vacio)
+  const editando = Boolean(veterinario)
 
   useEffect(() => {
-    if (abierto) setForm(vacio)
-  }, [abierto])
+    if (!abierto) return
+    if (veterinario) {
+      const cuenta = usuarios.find((u) => u.documento === veterinario.documento)
+      setForm({ ...vacio, ...veterinario, password: '', rol: cuenta?.rol ?? 'veterinario' })
+    } else {
+      setForm(vacio)
+    }
+  }, [abierto, veterinario, usuarios])
 
   const actualizar = (campo) => (evento) => setForm((f) => ({ ...f, [campo]: evento.target.value }))
 
   const manejarEnvio = (evento) => {
     evento.preventDefault()
-    agregarVeterinario(form)
+    if (editando) {
+      editarVeterinario(veterinario.documento, form)
+    } else {
+      agregarVeterinario(form)
+    }
     onCerrar()
   }
 
@@ -35,8 +46,10 @@ export function VeterinarioFormModal({ abierto, onCerrar }) {
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo="Registrar veterinario"
-      descripcion="Se crea el perfil profesional junto con su cuenta de acceso."
+      titulo={editando ? 'Editar veterinario' : 'Registrar veterinario'}
+      descripcion={
+        editando ? 'Actualiza el perfil profesional y su cuenta de acceso.' : 'Se crea el perfil profesional junto con su cuenta de acceso.'
+      }
     >
       <form onSubmit={manejarEnvio} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -80,10 +93,17 @@ export function VeterinarioFormModal({ abierto, onCerrar }) {
             <Input id="email" type="email" required value={form.email} onChange={actualizar('email')} />
           </div>
           <div>
-            <Label htmlFor="password" requerido>
+            <Label htmlFor="password" requerido={!editando}>
               Contraseña
             </Label>
-            <Input id="password" type="password" required value={form.password} onChange={actualizar('password')} />
+            <Input
+              id="password"
+              type="password"
+              required={!editando}
+              value={form.password}
+              onChange={actualizar('password')}
+              placeholder={editando ? 'Dejar en blanco para mantener la actual' : undefined}
+            />
           </div>
         </div>
 
@@ -102,7 +122,7 @@ export function VeterinarioFormModal({ abierto, onCerrar }) {
           <Button type="button" variant="secondary" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="submit">Crear cuenta</Button>
+          <Button type="submit">{editando ? 'Guardar cambios' : 'Crear cuenta'}</Button>
         </div>
       </form>
     </Modal>

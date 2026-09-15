@@ -4,8 +4,9 @@ import { Button } from '../../components/ui/Button'
 import { Label, Input, Select, Textarea, CampoAyuda } from '../../components/ui/Field'
 import { useData } from '../../context/DataContext'
 
-export function CitaFormModal({ abierto, onCerrar }) {
-  const { propietarios, mascotasDe, veterinarios, usuarios, agregarCita } = useData()
+export function CitaFormModal({ abierto, onCerrar, cita }) {
+  const { propietarios, mascotasDe, veterinarios, usuarios, propietarioDe, agregarCita, editarCita } = useData()
+  const editando = Boolean(cita)
 
   const veterinariosActivos = useMemo(
     () => veterinarios.filter((v) => usuarios.find((u) => u.documento === v.documento)?.activo),
@@ -17,6 +18,17 @@ export function CitaFormModal({ abierto, onCerrar }) {
 
   useEffect(() => {
     if (!abierto) return
+    if (cita) {
+      const propietario = propietarioDe(cita.mascota_id)
+      setPropietarioId(propietario?.id ?? '')
+      setForm({
+        mascota_id: cita.mascota_id,
+        veterinario_id: cita.veterinario_id,
+        fecha: cita.fecha,
+        motivo_consulta: cita.motivo_consulta,
+      })
+      return
+    }
     const primerPropietario = propietarios[0]?.id ?? ''
     setPropietarioId(primerPropietario)
     setForm({
@@ -26,7 +38,7 @@ export function CitaFormModal({ abierto, onCerrar }) {
       motivo_consulta: '',
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto])
+  }, [abierto, cita])
 
   const mascotasDelPropietario = mascotasDe(Number(propietarioId))
 
@@ -40,12 +52,17 @@ export function CitaFormModal({ abierto, onCerrar }) {
 
   const manejarEnvio = (evento) => {
     evento.preventDefault()
-    agregarCita({
+    const datos = {
       mascota_id: Number(form.mascota_id),
       veterinario_id: Number(form.veterinario_id),
       fecha: form.fecha,
       motivo_consulta: form.motivo_consulta,
-    })
+    }
+    if (editando) {
+      editarCita(cita.id, datos)
+    } else {
+      agregarCita(datos)
+    }
     onCerrar()
   }
 
@@ -55,8 +72,8 @@ export function CitaFormModal({ abierto, onCerrar }) {
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo="Agendar cita"
-      descripcion="La cita queda en estado pendiente hasta que se atienda."
+      titulo={editando ? 'Editar cita' : 'Agendar cita'}
+      descripcion={editando ? 'Actualiza los datos de esta cita pendiente.' : 'La cita queda en estado pendiente hasta que se atienda.'}
     >
       <form onSubmit={manejarEnvio} className="space-y-4">
         <div>
@@ -126,7 +143,7 @@ export function CitaFormModal({ abierto, onCerrar }) {
             Cancelar
           </Button>
           <Button type="submit" disabled={sinMascotas}>
-            Agendar cita
+            {editando ? 'Guardar cambios' : 'Agendar cita'}
           </Button>
         </div>
       </form>

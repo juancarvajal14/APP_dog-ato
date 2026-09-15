@@ -1,20 +1,24 @@
 import { useMemo, useState } from 'react'
-import { Plus, PawPrint, Users as UsersIcon, Venus, Mars, Cat, Dog, Bird, Rabbit, HelpCircle } from 'lucide-react'
+import { Pencil, Plus, PawPrint, Trash2, Users as UsersIcon, Venus, Mars, Cat, Dog, Bird, Rabbit, HelpCircle } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { Card, StatCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Modal } from '../../components/ui/Modal'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { calcularEdad, formatearFecha } from '../../lib/fechas'
 import { MascotaFormModal } from './MascotaFormModal'
 
 const iconoPorEspecie = { Perro: Dog, Gato: Cat, Ave: Bird, Conejo: Rabbit }
 
 export function MascotasTab() {
-  const { mascotas, propietarioDe } = useData()
+  const { mascotas, citas, propietarioDe, eliminarMascota } = useData()
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [mascotaEditar, setMascotaEditar] = useState(null)
+  const [aEliminar, setAEliminar] = useState(null)
 
   const filtradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase()
@@ -31,6 +35,13 @@ export function MascotasTab() {
   }, [mascotas, busqueda, propietarioDe])
 
   const totalEspecies = new Set(mascotas.map((m) => m.especie)).size
+  const citasDelEliminar = aEliminar ? citas.filter((c) => c.mascota_id === aEliminar.id) : []
+  const bloqueado = citasDelEliminar.length > 0
+
+  const cerrarModalFormulario = () => {
+    setModalAbierto(false)
+    setMascotaEditar(null)
+  }
 
   return (
     <div className="space-y-6">
@@ -71,6 +82,7 @@ export function MascotasTab() {
                   <th className="px-5 py-3">Edad</th>
                   <th className="px-5 py-3">Propietario</th>
                   <th className="px-5 py-3">Nació</th>
+                  <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sand">
@@ -104,6 +116,21 @@ export function MascotasTab() {
                         <p className="text-xs text-ink-faint">{propietario?.telefono}</p>
                       </td>
                       <td className="px-5 py-3.5 text-ink-soft">{formatearFecha(mascota.fecha_nacimiento)}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => setMascotaEditar(mascota)}>
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger-soft"
+                            onClick={() => setAEliminar(mascota)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
@@ -113,7 +140,34 @@ export function MascotasTab() {
         )}
       </Card>
 
-      <MascotaFormModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} />
+      <MascotaFormModal abierto={modalAbierto} onCerrar={cerrarModalFormulario} />
+      <MascotaFormModal abierto={Boolean(mascotaEditar)} onCerrar={cerrarModalFormulario} mascota={mascotaEditar} />
+
+      <Modal
+        abierto={Boolean(aEliminar) && bloqueado}
+        onCerrar={() => setAEliminar(null)}
+        titulo="No se puede eliminar"
+        ancho="max-w-md"
+      >
+        <p className="text-sm text-ink-soft">
+          {aEliminar?.nombre} tiene {citasDelEliminar.length} {citasDelEliminar.length === 1 ? 'cita registrada' : 'citas registradas'}{' '}
+          en su historial. No se puede eliminar una mascota con citas o historial clínico asociado.
+        </p>
+        <div className="mt-6 flex justify-end">
+          <Button variant="secondary" onClick={() => setAEliminar(null)}>
+            Entendido
+          </Button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        abierto={Boolean(aEliminar) && !bloqueado}
+        onCerrar={() => setAEliminar(null)}
+        onConfirmar={() => eliminarMascota(aEliminar.id)}
+        titulo="Eliminar mascota"
+        descripcion={`Esta acción borra permanentemente a ${aEliminar?.nombre}. Esta operación no se puede deshacer.`}
+        textoConfirmar="Eliminar permanentemente"
+      />
     </div>
   )
 }
