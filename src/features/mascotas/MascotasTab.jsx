@@ -1,34 +1,39 @@
 import { useMemo, useState } from 'react'
 import { Plus, PawPrint, Users as UsersIcon, Venus, Mars, Cat, Dog, Bird, Rabbit, HelpCircle } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useAuth } from '../../context/AuthContext'
+import { listarMascotas } from '../../api/recursos'
+import { useRecurso } from '../../lib/useRecurso'
 import { Card, StatCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Cargando, ErrorCarga } from '../../components/ui/Estados'
 import { calcularEdad, formatearFecha } from '../../lib/fechas'
 import { MascotaFormModal } from './MascotaFormModal'
 
 const iconoPorEspecie = { Perro: Dog, Gato: Cat, Ave: Bird, Conejo: Rabbit }
 
 export function MascotasTab() {
-  const { mascotas, propietarioDe } = useData()
+  const { datos: mascotas, cargando, error, recargar } = useRecurso(listarMascotas)
+  const { puede } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
 
   const filtradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase()
     if (!termino) return mascotas
-    return mascotas.filter((m) => {
-      const propietario = propietarioDe(m.id)
-      return (
+    return mascotas.filter(
+      (m) =>
         m.nombre.toLowerCase().includes(termino) ||
         m.especie.toLowerCase().includes(termino) ||
         (m.raza ?? '').toLowerCase().includes(termino) ||
-        `${propietario?.nombre ?? ''} ${propietario?.apellido ?? ''}`.toLowerCase().includes(termino)
-      )
-    })
-  }, [mascotas, busqueda, propietarioDe])
+        `${m.propietario.nombre} ${m.propietario.apellido}`.toLowerCase().includes(termino),
+    )
+  }, [mascotas, busqueda])
+
+  if (cargando) return <Cargando />
+  if (error) return <ErrorCarga mensaje={error} onReintentar={recargar} />
 
   const totalEspecies = new Set(mascotas.map((m) => m.especie)).size
 
@@ -47,10 +52,12 @@ export function MascotasTab() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, especie o propietario..." />
-        <Button onClick={() => setModalAbierto(true)}>
-          <Plus className="size-4" />
-          Nueva mascota
-        </Button>
+        {puede('CLI_MASCOTAS', 'CREAR') && (
+          <Button onClick={() => setModalAbierto(true)}>
+            <Plus className="size-4" />
+            Nueva mascota
+          </Button>
+        )}
       </div>
 
       <Card className="overflow-hidden p-0">
@@ -75,7 +82,7 @@ export function MascotasTab() {
               </thead>
               <tbody className="divide-y divide-sand">
                 {filtradas.map((mascota) => {
-                  const propietario = propietarioDe(mascota.id)
+                  const propietario = mascota.propietario
                   const Icono = iconoPorEspecie[mascota.especie] ?? HelpCircle
                   return (
                     <tr key={mascota.id} className="transition-colors hover:bg-cream-soft/40">
@@ -99,9 +106,9 @@ export function MascotasTab() {
                       <td className="px-5 py-3.5 text-ink-soft">{calcularEdad(mascota.fecha_nacimiento) ?? '—'}</td>
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-ink">
-                          {propietario ? `${propietario.nombre} ${propietario.apellido}` : '—'}
+                          {propietario.nombre} {propietario.apellido}
                         </p>
-                        <p className="text-xs text-ink-faint">{propietario?.telefono}</p>
+                        <p className="text-xs text-ink-faint">{propietario.telefono}</p>
                       </td>
                       <td className="px-5 py-3.5 text-ink-soft">{formatearFecha(mascota.fecha_nacimiento)}</td>
                     </tr>
@@ -113,7 +120,7 @@ export function MascotasTab() {
         )}
       </Card>
 
-      <MascotaFormModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} />
+      <MascotaFormModal abierto={modalAbierto} onCerrar={() => setModalAbierto(false)} onGuardado={recargar} />
     </div>
   )
 }

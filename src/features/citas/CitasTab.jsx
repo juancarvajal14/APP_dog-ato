@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Ban, CalendarClock, CheckCircle2, Clock3, Plus } from 'lucide-react'
-import { useData } from '../../context/DataContext'
+import { useAuth } from '../../context/AuthContext'
+import { cancelarCita, listarCitas } from '../../api/recursos'
+import { useRecurso } from '../../lib/useRecurso'
 import { Card, StatCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { BadgeEstadoCita } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { AlertaError, Cargando, ErrorCarga } from '../../components/ui/Estados'
 import { formatearFechaHora } from '../../lib/fechas'
 import { cn } from '../../lib/cn'
 import { CitaFormModal } from './CitaFormModal'
@@ -20,44 +23,46 @@ const filtros = [
 ]
 
 export function CitasTab() {
-  const { citas, mascotas, veterinarios, propietarioDe, cancelarCita } = useData()
+  const { datos: citas, cargando, error, recargar } = useRecurso(listarCitas)
+  const { puede } = useAuth()
   const [filtro, setFiltro] = useState('todas')
   const [busqueda, setBusqueda] = useState('')
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
   const [citaACompletar, setCitaACompletar] = useState(null)
   const [citaACancelar, setCitaACancelar] = useState(null)
-
-  const citasEnriquecidas = useMemo(
-    () =>
-      citas
-        .map((cita) => ({
-          ...cita,
-          mascota: mascotas.find((m) => m.id === cita.mascota_id),
-          veterinario: veterinarios.find((v) => v.id === cita.veterinario_id),
-          propietario: propietarioDe(cita.mascota_id),
-        }))
-        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
-    [citas, mascotas, veterinarios, propietarioDe],
-  )
+  const [errorAccion, setErrorAccion] = useState('')
 
   const filtradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase()
-    return citasEnriquecidas.filter((cita) => {
+    return citas.filter((cita) => {
       if (filtro !== 'todas' && cita.estado !== filtro) return false
       if (!termino) return true
       return (
-        cita.mascota?.nombre.toLowerCase().includes(termino) ||
-        `${cita.veterinario?.nombre} ${cita.veterinario?.apellido}`.toLowerCase().includes(termino) ||
+        cita.mascota.nombre.toLowerCase().includes(termino) ||
+        `${cita.veterinario.nombre} ${cita.veterinario.apellido}`.toLowerCase().includes(termino) ||
         cita.motivo_consulta.toLowerCase().includes(termino)
       )
     })
-  }, [citasEnriquecidas, filtro, busqueda])
+  }, [citas, filtro, busqueda])
 
   const conteos = {
     pendiente: citas.filter((c) => c.estado === 'pendiente').length,
     completada: citas.filter((c) => c.estado === 'completada').length,
     cancelada: citas.filter((c) => c.estado === 'cancelada').length,
   }
+
+  const confirmarCancelacion = async () => {
+    setErrorAccion('')
+    try {
+      await cancelarCita(citaACancelar.id)
+    } catch (falla) {
+      setErrorAccion(falla.message)
+    }
+    recargar()
+  }
+
+  if (cargando) return <Cargando />
+  if (error) return <ErrorCarga mensaje={error} onReintentar={recargar} />
 
   return (
     <div className="space-y-6">
@@ -66,6 +71,8 @@ export function CitasTab() {
         <StatCard icono={CheckCircle2} etiqueta="Citas completadas" valor={conteos.completada} tono="success" />
         <StatCard icono={Ban} etiqueta="Citas canceladas" valor={conteos.cancelada} tono="accent" />
       </div>
+
+      <AlertaError mensaje={errorAccion} onCerrar={() => setErrorAccion('')} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -85,10 +92,12 @@ export function CitasTab() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <SearchInput value={busqueda} onChange={setBusqueda} placeholder="Buscar mascota, veterinario o motivo..." />
-          <Button onClick={() => setModalNuevaCita(true)}>
-            <Plus className="size-4" />
-            Nueva cita
-          </Button>
+          {puede('CLI_CITAS', 'CREAR') && (
+            <Button onClick={() => setModalNuevaCita(true)}>
+              <Plus className="size-4" />
+              Nueva cita
+            </Button>
+          )}
         </div>
       </div>
 
@@ -116,12 +125,12 @@ export function CitasTab() {
               <tbody className="divide-y divide-sand">
                 {filtradas.map((cita) => (
                   <tr key={cita.id} className="transition-colors hover:bg-cream-soft/40">
-                    <td className="px-5 py-3.5 font-semibold text-ink">{cita.mascota?.nombre ?? '—'}</td>
+                    <td className="px-5 py-3.5 font-semibold text-ink">{cita.mascota.nombre}</td>
                     <td className="px-5 py-3.5 text-ink-soft">
-                      {cita.propietario ? `${cita.propietario.nombre} ${cita.propietario.apellido}` : '—'}
+                      {cita.propietario.nombre} {cita.propietario.apellido}
                     </td>
                     <td className="px-5 py-3.5 text-ink-soft">
-                      {cita.veterinario ? `${cita.veterinario.nombre} ${cita.veterinario.apellido}` : '—'}
+                      {cita.veterinario.nombre} {cita.veterinario.apellido}
                     </td>
                     <td className="px-5 py-3.5 text-ink-soft">{formatearFechaHora(cita.fecha)}</td>
                     <td className="max-w-56 truncate px-5 py-3.5 text-ink-soft" title={cita.motivo_consulta}>
@@ -131,7 +140,7 @@ export function CitasTab() {
                       <BadgeEstadoCita estado={cita.estado} />
                     </td>
                     <td className="px-5 py-3.5">
-                      {cita.estado === 'pendiente' ? (
+                      {cita.estado === 'pendiente' && puede('CLI_CITAS', 'ACTUALIZAR') ? (
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="accent" onClick={() => setCitaACompletar(cita)}>
                             Completar
@@ -152,14 +161,14 @@ export function CitasTab() {
         )}
       </Card>
 
-      <CitaFormModal abierto={modalNuevaCita} onCerrar={() => setModalNuevaCita(false)} />
-      <CompletarCitaModal cita={citaACompletar} onCerrar={() => setCitaACompletar(null)} />
+      <CitaFormModal abierto={modalNuevaCita} onCerrar={() => setModalNuevaCita(false)} onGuardado={recargar} />
+      <CompletarCitaModal cita={citaACompletar} onCerrar={() => setCitaACompletar(null)} onGuardado={recargar} />
       <ConfirmDialog
         abierto={Boolean(citaACancelar)}
         onCerrar={() => setCitaACancelar(null)}
-        onConfirmar={() => cancelarCita(citaACancelar.id)}
+        onConfirmar={confirmarCancelacion}
         titulo="Cancelar cita"
-        descripcion={`Se cancelará la cita de ${citaACancelar?.mascota?.nombre ?? 'esta mascota'}. No se generará historial clínico para ella.`}
+        descripcion={`Se cancelará la cita de ${citaACancelar?.mascota.nombre ?? 'esta mascota'}. No se generará historial clínico para ella.`}
         textoConfirmar="Sí, cancelar cita"
       />
     </div>

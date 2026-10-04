@@ -6,9 +6,13 @@ import { Marca } from '../components/layout/Marca'
 import { Button } from '../components/ui/Button'
 import { Label, Input, CampoError } from '../components/ui/Field'
 
+// Las cuentas de desarrollo solo se muestran en `npm run dev`; en un despliegue público quedan ocultas
+// (a menos que se defina VITE_MOSTRAR_CUENTAS_DEMO=true, p. ej. para una demostración controlada).
+const MOSTRAR_CUENTAS_DEMO = import.meta.env.DEV || import.meta.env.VITE_MOSTRAR_CUENTAS_DEMO === 'true'
+
 const cuentasDemo = [
-  { rol: 'Administrador', email: 'camilo.carvajal@dogato.com', password: 'admin123' },
-  { rol: 'Veterinario', email: 'andres.gomez@dogato.com', password: 'vet123' },
+  { rol: 'Administrador', email: 'admin@veterinaria.com', password: 'Admin12345*' },
+  { rol: 'Veterinario', email: 'andres.gomez@dogato.com', password: 'Vet12345*' },
 ]
 
 export function LoginPage() {
@@ -19,15 +23,16 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
 
-  const manejarEnvio = (evento) => {
+  const manejarEnvio = async (evento) => {
     evento.preventDefault()
     setError('')
     setEnviando(true)
-    setTimeout(() => {
-      const resultado = iniciarSesion(email, password)
-      if (!resultado.ok) setError(resultado.mensaje)
+    const resultado = await iniciarSesion(email.trim(), password)
+    if (!resultado.ok) {
+      setError(resultado.mensaje)
       setEnviando(false)
-    }, 400)
+    }
+    // Si fue exitoso, App cambia al Dashboard y esta pantalla se desmonta.
   }
 
   const usarCuenta = (cuenta) => {
@@ -145,25 +150,27 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 rounded-xl border border-sand bg-cream-soft/60 p-4">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
-              <ShieldCheck className="size-3.5" />
-              Cuentas de prueba (mockup)
-            </p>
-            <div className="mt-2.5 space-y-1.5">
-              {cuentasDemo.map((cuenta) => (
-                <button
-                  key={cuenta.email}
-                  type="button"
-                  onClick={() => usarCuenta(cuenta)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-white"
-                >
-                  <span className="font-medium text-ink">{cuenta.rol}</span>
-                  <span className="text-ink-faint">{cuenta.email}</span>
-                </button>
-              ))}
+          {MOSTRAR_CUENTAS_DEMO && (
+            <div className="mt-8 rounded-xl border border-sand bg-cream-soft/60 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
+                <ShieldCheck className="size-3.5" />
+                Cuentas de prueba (desarrollo)
+              </p>
+              <div className="mt-2.5 space-y-1.5">
+                {cuentasDemo.map((cuenta) => (
+                  <button
+                    key={cuenta.email}
+                    type="button"
+                    onClick={() => usarCuenta(cuenta)}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-white"
+                  >
+                    <span className="font-medium text-ink">{cuenta.rol}</span>
+                    <span className="text-ink-faint">{cuenta.email}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
       </div>
     </div>
